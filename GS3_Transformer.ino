@@ -398,6 +398,9 @@ void setup()
 	pinMode(FLOW_COUNT_INPUT, INPUT_PULLUP);
 	pinMode(GREEN_LED, OUTPUT);
 	pinMode(RED_LED, OUTPUT);
+	#ifdef SINGLE_PUMP
+          pinMode(PUMP_RELAY, INPUT_PULLUP);
+        #endif
 	pinMode(STROBE_RELAY, OUTPUT);
 	ledColor('r');
 	Serial2.begin(1200, SERIAL_8E2);	// opens serial port for Gicar 3d5, sets data rate to 1200 bps, 8 bits even parity, 2 stop bits
@@ -534,14 +537,21 @@ void loop(void)
 
 		displayPressureandWeight();
 
-#ifdef SINGLE_PUMP		
-		 // Check if pump relay by 3D5 is switched on - if yes assume tank fill cycle
-		while (digitalRead(PUMP_RELAY) == LOW)
-		{
-			md.setM1Speed(constrain(flushPWM, pumpMinPWM, pumpMaxPWM));
-		}
-		md.setM1Speed(0); //Shut down pump motor
-
+#ifdef SINGLE_PUMP                    
+      // Check if pump relay by 3D5 is switched on - if yes assume tank fill cycle
+      if (digitalRead(PUMP_RELAY) == LOW)
+      {
+         Serial.println("Autofill..."); 
+         md.setM1Speed(flushPWM); 
+         while (digitalRead(PUMP_RELAY) == LOW)
+         {
+            // Do nothing else than tank filling...
+            delay(500);
+            Serial.print(".");         
+         }       
+         Serial.println("Stop Autofill...");
+      }
+      md.setM1Speed(0); //Shut down pump motor after autofill
 #endif
 		if (millis() > sleepTimer)
 		{
